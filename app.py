@@ -1,23 +1,19 @@
 import os
 import tempfile
-import whisper
 from flask import Flask, request, jsonify
+from faster_whisper import WhisperModel
 
 app = Flask(__name__)
 
-# Server start hote hi model load karo (ek baar)
-print("Loading Whisper model...")
-model = whisper.load_model("tiny")
-print("Model loaded! Server ready.")
+print("Loading model...")
+model = WhisperModel("tiny", device="cpu", compute_type="int8")
+print("Model ready!")
 
 EMERGENCY_KEYWORDS = [
-    # English
     "help", "help me", "save me", "emergency",
-    # Hindi roman
     "bachao", "madad", "bachao mujhe", "madad karo",
     "help karo", "bachaa lo", "koi hai", "please help",
-    # Hindi devanagari (whisper kabhi kabhi yeh return karta hai)
-    "बचाओ", "मदद", "मदद करो", "बचाओ मुझे"
+    "बचाओ", "मदद", "मदद करो"
 ]
 
 def detect_keywords(text):
@@ -29,10 +25,7 @@ def detect_keywords(text):
 
 @app.route('/health', methods=['GET'])
 def health():
-    return jsonify({
-        "status": "ok",
-        "model": "whisper-tiny"
-    })
+    return jsonify({"status": "ok", "model": "faster-whisper-tiny"})
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
@@ -48,21 +41,18 @@ def analyze():
 
         print(f"Audio received: {len(audio_bytes)} bytes")
 
-        # Temp file mein save karo
         with tempfile.NamedTemporaryFile(suffix=".m4a", delete=False) as tmp:
             tmp.write(audio_bytes)
             tmp_path = tmp.name
 
         try:
-            # Whisper se transcribe karo
-            result = model.transcribe(
+            segments, info = model.transcribe(
                 tmp_path,
-                language=None,   # auto-detect Hindi + English
-                fp16=False,      # Render CPU pe fp16 nahi chalega
-                temperature=0.0  # deterministic
+                language=None,
+                beam_size=1        # kam memory use karega
             )
-            transcript = result.get("text", "").strip()
-            detected_lang = result.get("language", "unknown")
+            transcript = " ".join([s.text for s in segments]).strip()
+            detected_lang = info.language
 
             print(f"Transcript: '{transcript}' | Language: {detected_lang}")
 
@@ -79,7 +69,7 @@ def analyze():
             os.unlink(tmp_path)
 
     except Exception as e:
-        print(f"Error in /analyze: {e}")
+        print(f"Error: {e}")
         return jsonify({"emergency": False, "error": str(e)}), 500
 
 if __name__ == '__main__':
