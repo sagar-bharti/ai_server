@@ -12,7 +12,10 @@ app.get('/health', (req, res) => {
 });
 
 app.post('/analyze', (req, res) => {
-  res.json({ emergency: true, text: "No emergency detected" });
+  res.json({
+    emergency: true,
+    text: "help"
+  });
 });
 
 const PORT = process.env.PORT || 10000;
