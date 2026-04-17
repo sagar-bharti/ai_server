@@ -42,8 +42,8 @@ def analyze_audio():
         recognizer = sr.Recognizer()
         
         with sr.AudioFile(tmp_path) as source:
-            recognizer.adjust_for_ambient_noise(source)
-            audio_data = recognizer.record(source)
+           # recognizer.adjust_for_ambient_noise(source)
+            audio_data = recognizer.record(source)   
 
         # Cleanup temp file
         os.unlink(tmp_path)
