@@ -2,3 +2,6 @@ flask
 faster-whisper
 numpy
 gunicorn
+
+twilio
+python-dotenv
